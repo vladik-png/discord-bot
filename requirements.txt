@@ -1,0 +1,9 @@
+discord.py
+PyNaCl
+ffmpeg
+ffmpeg-python
+yt-dlp
+wavelink
+dotenv
+load_dotenv
+os

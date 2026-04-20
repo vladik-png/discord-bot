@@ -8,4 +8,4 @@ timeout /t 5 /nobreak >nul
 
 echo Start Bot...
 cd /d "D:\py"
-start "Bot" python main.py
+start "Bot" python ds.py

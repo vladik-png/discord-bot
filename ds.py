@@ -3,6 +3,8 @@ from discord.ext import commands
 import wavelink
 import os
 from dotenv import load_dotenv
+import aiohttp
+from memory import save_to_memory, recall_memory
 
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -18,7 +20,7 @@ class MusicBot(commands.Bot):
         await wavelink.Pool.connect(client=self, nodes=[node])
         
         await self.load_extension("cogs.music")
-        
+        await self.load_extension("cogs.ai")
         await self.tree.sync()
 
     async def on_ready(self):

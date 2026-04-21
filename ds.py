@@ -58,7 +58,7 @@ async def on_wavelink_track_end(payload: wavelink.TrackEndEventPayload):
         next_track = player.queue.get()
         await player.play(next_track)
 
-async def play_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+async def radio_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
     if not current:
         return [app_commands.Choice(name=n, value=v) for n, v in RADIO_STATIONS.items()]
     
@@ -79,37 +79,69 @@ async def play_autocomplete(interaction: discord.Interaction, current: str) -> l
     except: pass
     return choices[:25]
 
-@bot.tree.command(name="play", description="Play a song, playlist or radio station")
-@app_commands.describe(input="Search query, URL or choose from radio list")
-@app_commands.autocomplete(input=play_autocomplete)
-async def play(interaction: discord.Interaction, input: str):
+@bot.tree.command(name="radio", description="Search and play a radio station")
+@app_commands.describe(query="Choose from the list or search for a radio station")
+@app_commands.autocomplete(query=radio_autocomplete)
+async def radio(interaction: discord.Interaction, query: str):
     if not interaction.guild.voice_client:
         if interaction.user.voice:
             await interaction.user.voice.channel.connect(cls=wavelink.Player)
         else:
-            await interaction.response.send_message("You must be in a voice channel.", ephemeral=True)
-            return
+            return await interaction.response.send_message("You must be in a voice channel.", ephemeral=True)
 
     player: wavelink.Player = interaction.guild.voice_client
     await interaction.response.defer()
     
-    tracks = await wavelink.Playable.search(input)
+    tracks = await wavelink.Playable.search(query)
     if not tracks:
-        await interaction.followup.send("No results found.")
-        return
+        return await interaction.followup.send("Radio station not found or stream is offline.")
+
+    track = tracks[0]
+    player.queue.put(track)
+    
+    if not player.playing:
+        await player.play(player.queue.get())
+    
+    await interaction.followup.send(f"📻 Tuning into: **{track.title}**")
+
+@bot.tree.command(name="play", description="Play a song or playlist from the internet")
+@app_commands.describe(query="Search query (Song name) or URL (SoundCloud, YouTube, etc.)")
+async def play(interaction: discord.Interaction, query: str):
+    if not interaction.guild.voice_client:
+        if interaction.user.voice:
+            await interaction.user.voice.channel.connect(cls=wavelink.Player)
+        else:
+            return await interaction.response.send_message("You must be in a voice channel.", ephemeral=True)
+
+    player: wavelink.Player = interaction.guild.voice_client
+    await interaction.response.defer()
+    
+    tracks = await wavelink.Playable.search(query)
+    if not tracks:
+        return await interaction.followup.send("No music found for your query.")
 
     if isinstance(tracks, wavelink.Playlist):
         player.queue.put(tracks)
-        msg = f"Added playlist: **{tracks.name}**"
+        msg = f"🎶 Added playlist: **{tracks.name}**"
     else:
         track = tracks[0]
         player.queue.put(track)
-        msg = f"Added: **{track.title}**"
+        msg = f"🎵 Added: **{track.title}**"
 
     if not player.playing:
         await player.play(player.queue.get())
     
     await interaction.followup.send(msg)
+
+@bot.tree.command(name="pause", description="Pause or resume playback")
+async def pause(interaction: discord.Interaction):
+    if interaction.guild.voice_client:
+        player: wavelink.Player = interaction.guild.voice_client
+        await player.pause(not player.paused)
+        state = "Paused" if player.paused else "Resumed"
+        await interaction.response.send_message(f"⏸️ Music {state}.")
+    else:
+        await interaction.response.send_message("Bot is not connected.", ephemeral=True)
 
 @bot.tree.command(name="destroy", description="Clear the queue and stop music")
 async def destroy(interaction: discord.Interaction):

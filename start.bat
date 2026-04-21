@@ -1,11 +1,16 @@
 @echo off
-echo Start Lavalink...
-cd /d "D:\py"
+color 0A
+echo =========================================
+echo 1. Starting Lavalink Server...
+echo =========================================
 start "Lavalink Server" java -jar Lavalink.jar
 
-echo Waiting 5 seconds
-timeout /t 5 /nobreak >nul
+echo Waiting 5 seconds for Lavalink to boot up...
+timeout /t 5 /nobreak > NUL
 
-echo Start Bot...
-cd /d "D:\py"
-start "Bot" python ds.py
+echo =========================================
+echo 2. Starting Discord Bot...
+echo =========================================
+python ds.py
+
+pause
